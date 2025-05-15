@@ -6,7 +6,7 @@ from influxdb_client.client.exceptions import InfluxDBError
 from fastapi import HTTPException
 
 # InfluxDB connection parameters
-INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://influxdb:8086")
+INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://localhost:8086")
 INFLUXDB_TOKEN = os.environ.get("INFLUXDB_TOKEN", "my-super-secret-token")
 INFLUXDB_ORG = os.environ.get("INFLUXDB_ORG", "my-org")
 INFLUXDB_BUCKET = os.environ.get("INFLUXDB_BUCKET", "time-series-data")
