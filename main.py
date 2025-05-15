@@ -7,6 +7,7 @@ from database import get_influxdb_client
 from database.influx import (
     post_point_to_feature_and_customer,
     get_feature_median_of_feature_and_customer,
+    delete_points_of_feature_customer_before,
 )
 from models import FeatureData
 
@@ -68,6 +69,8 @@ async def get_feature_median(
     Get the median value for a feature for a specific customer.
     """
 
+    # Validate if the featureId and customerId exist: SKIPPED
+
     try:
         result = await get_feature_median_of_feature_and_customer(
             client=influxdb_client,
@@ -90,4 +93,37 @@ async def get_feature_median(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-    # I'll take a short breaktime.
+
+@app.delete("/data/features/{feature_id}/customers/{customer_id}")
+async def delete_points_before(
+    feature_id: Annotated[str, Path(description="Unique identifier for the feature")],
+    customer_id: Annotated[str, Path(description="Unique identifier for the customer")],
+    before: str,
+    influxdb_client: InfluxDBClient = Depends(get_influxdb_client),
+):
+    # Validate if the featureId and customerId exist: SKIPPED
+
+    # Validate if the "before" is valid
+
+    try:
+        result = await delete_points_of_feature_customer_before(
+            client=influxdb_client,
+            feature_id=feature_id,
+            customer_id=customer_id,
+            before=before,
+        )
+        if result:
+            return {
+                "status": "success",
+                "message": "Data deleted",
+                "feature_id": feature_id,
+                "customer_id": customer_id,
+                "before": before,
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to delete the datapoint from the database.",
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

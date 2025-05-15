@@ -29,12 +29,6 @@ def get_influxdb_client():
 
         yield client
 
-    except InfluxDBError as e:
-        raise HTTPException(status_code=503, detail=f"InfluxDB error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Database connection error: {str(e)}"
-        )
     finally:
         client.close()
 
@@ -76,3 +70,19 @@ async def get_feature_median_of_feature_and_customer(client, feature_id, custome
             break
 
     return median
+
+
+async def delete_points_of_feature_customer_before(
+    client, feature_id, customer_id, before
+):
+    delete_api = client.delete_api()
+
+    delete_api.delete(
+        start="1970-01-01T00:00:00Z",  # The origin of everything :D
+        stop=before,
+        predicate=f"_measurement={DEFAULT_MEASUREMENT} AND feature_id={feature_id} AND customer_id={customer_id}",
+        bucket=INFLUXDB_BUCKET,
+        org=INFLUXDB_ORG,
+    )
+
+    return True
