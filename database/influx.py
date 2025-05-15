@@ -33,7 +33,9 @@ def get_influxdb_client():
         client.close()
 
 
-async def post_point_to_feature_and_customer(client, feature_id, customer_id, data):
+async def post_point_to_feature_and_customer(
+    client: InfluxDBClient, feature_id: str, customer_id: str, data
+):
     write_api = client.write_api()
 
     point = (
@@ -86,3 +88,35 @@ async def delete_points_of_feature_customer_before(
     )
 
     return True
+
+
+async def get_midrange_of_feature_and_customer(
+    client, feature_id, customer_id, interval="1h"
+):
+    query_api = client.query_api()
+
+    query = f"""
+    from(bucket: "{INFLUXDB_BUCKET}")
+        |> range(start: -30d)
+        |> filter(fn: (r) => r._measurement == "{DEFAULT_MEASUREMENT}")
+        |> filter(fn: (r) => r["feature_id"] == "{feature_id}")
+        |> filter(fn: (r) => r["customer_id"] == "{customer_id}")
+        |> aggregateWindow(every: {interval}, fn: mean, createEmpty: false)
+        |> yield(name: "mean")
+    """
+
+    result = query_api.query(query=query)
+
+    values = []
+    for table in result:
+        for record in table.records:
+            values.append(record.get_value())
+
+    if len(values) == 0:
+        return None
+
+    min_val = min(values)
+    max_val = max(values)
+    midrange = (max_val - min_val) / 2
+
+    return {"min": min_val, "max": max_val, "midrange": midrange}
