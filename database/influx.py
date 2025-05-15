@@ -36,7 +36,6 @@ def get_influxdb_client():
             status_code=500, detail=f"Database connection error: {str(e)}"
         )
     finally:
-        # Make sure to close the client
         client.close()
 
 
@@ -53,3 +52,27 @@ async def post_point_to_feature_and_customer(client, feature_id, customer_id, da
 
     write_api.write(bucket=INFLUXDB_BUCKET, record=point)
     return True
+
+
+async def get_feature_median_of_feature_and_customer(client, feature_id, customer_id):
+    query_api = client.query_api()
+
+    # Approximate or exact? I assume we use approximate to save resources
+    query = f"""
+    from(bucket: "{INFLUXDB_BUCKET}") \
+        |> range(start: -30d) \
+        |> filter(fn: (r) => r._measurement == "{DEFAULT_MEASUREMENT}")
+        |> filter(fn: (r) => r["feature_id"] == "{feature_id}")
+        |> filter(fn: (r) => r["customer_id"] == "{customer_id}")
+        |> median()
+    """
+
+    result = query_api.query(query=query)
+
+    median = None
+    for table in result:
+        for record in table.records:
+            median = record.get_value()
+            break
+
+    return median
