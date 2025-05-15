@@ -1,9 +1,8 @@
 import os
 from datetime import datetime
+from typing import Optional, Dict, List
 
 from influxdb_client import InfluxDBClient, Point
-from influxdb_client.client.exceptions import InfluxDBError
-from fastapi import HTTPException
 
 # InfluxDB connection parameters
 INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://localhost:8086")
@@ -50,7 +49,9 @@ async def post_point_to_feature_and_customer(
     return True
 
 
-async def get_feature_median_of_feature_and_customer(client, feature_id, customer_id):
+async def get_feature_median_of_feature_and_customer(
+    client: InfluxDBClient, feature_id: str, customer_id: str
+) -> Optional[float]:
     query_api = client.query_api()
 
     # Approximate or exact? I assume we use approximate to save resources
@@ -75,8 +76,8 @@ async def get_feature_median_of_feature_and_customer(client, feature_id, custome
 
 
 async def delete_points_of_feature_customer_before(
-    client, feature_id, customer_id, before
-):
+    client: InfluxDBClient, feature_id: str, customer_id: str, before: str
+) -> bool:
     delete_api = client.delete_api()
 
     delete_api.delete(
@@ -91,8 +92,8 @@ async def delete_points_of_feature_customer_before(
 
 
 async def get_midrange_of_feature_and_customer(
-    client, feature_id, customer_id, interval="1h"
-):
+    client: InfluxDBClient, feature_id: str, customer_id: str, interval: str = "1h"
+) -> Optional[Dict[str, float]]:
     query_api = client.query_api()
 
     query = f"""
@@ -107,7 +108,7 @@ async def get_midrange_of_feature_and_customer(
 
     result = query_api.query(query=query)
 
-    values = []
+    values: List[float] = []
     for table in result:
         for record in table.records:
             values.append(record.get_value())
